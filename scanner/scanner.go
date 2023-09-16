@@ -10,7 +10,6 @@ type Scanner struct {
 	Tokens  []*token.Token
 	Line    int
 	Start   int
-	End     int
 	Current int
 	Source  string
 }
@@ -68,30 +67,15 @@ func (s *Scanner) CreateTokens() ([]*token.Token, error) {
 		case '\t':
 		case '\r':
 		case '"':
-			result, err := s.String()
+			err := s.String()
 			if err != nil {
-				panic(err.Error())
+				return nil, err
 			}
-			s.AddToken(token.STRING, result)
 		default:
-			if !s.IsDigit(char) && !s.IsAlpha(char) {
-				return nil, fmt.Errorf("unkonwn character [%s] at line %d, column %d, ", string(char), s.Line, s.Current)
+			err := s.ProcessAlphaNumericTokens(char)
+			if err != nil {
+				return nil, err
 			}
-
-			if s.IsAlpha(char) {
-				err := s.Identifier()
-				if err != nil {
-					return nil, err
-				}
-			}
-
-			if s.IsDigit(char) {
-				err := s.Number()
-				if err != nil {
-					return nil, err
-				}
-			}
-
 		}
 	}
 	s.Tokens = append(s.Tokens, &token.Token{
@@ -100,6 +84,18 @@ func (s *Scanner) CreateTokens() ([]*token.Token, error) {
 	})
 
 	return s.Tokens, nil
+}
+
+func (s *Scanner) ProcessAlphaNumericTokens(char rune) error {
+	if s.IsAlpha(char) {
+		return s.Identifier()
+	}
+
+	if s.IsDigit(char) {
+		return s.Number()
+	}
+
+	return fmt.Errorf("unkonwn character [%s] at line %d, column %d, ", string(char), s.Line, s.Current)
 }
 
 func (s *Scanner) IsDigit(char rune) bool {
@@ -119,15 +115,16 @@ func (s *Scanner) FindDoubleSymbols(symbols string, trueType, falseType token.To
 
 	if s.Peak(string(symbols[1])) {
 		s.AddToken(trueType, symbols)
-	} else {
-		s.AddToken(falseType, string(symbols[0]))
+		return
 	}
+
+	s.AddToken(falseType, string(symbols[0]))
 }
 
 func (s *Scanner) AddToken(tokenType token.Token_type, char string) {
 	s.Tokens = append(s.Tokens, &token.Token{
 		Type: tokenType,
-		Char: string(char),
+		Char: char,
 	})
 }
 
@@ -142,12 +139,10 @@ func (s *Scanner) Identifier() error {
 			break
 		}
 
-		s.Current++
+		s.moveCursor()
 	}
 
-	result := s.Source[s.Start:s.Current]
-	err := s.CheckIfWordIsReserved(result)
-	return err
+	return s.CheckIfWordIsReserved(s.GetSlice())
 }
 
 func (s *Scanner) CheckIfWordIsReserved(reserved string) error {
@@ -192,7 +187,7 @@ func (s *Scanner) Number() error {
 			isFloat = true
 		}
 
-		s.Current++
+		s.moveCursor()
 	}
 
 	if isFloat {
@@ -204,24 +199,24 @@ func (s *Scanner) Number() error {
 	return nil
 }
 
-func (s *Scanner) String() (string, error) {
+func (s *Scanner) String() error {
 	s.Start = s.Current
 	for {
 		if !s.isNotAtTheEnd() {
-			return "", fmt.Errorf("string not closed")
+			return fmt.Errorf("string not closed")
 		}
 
 		if s.GetCurrent() == '"' {
 			break
 		}
 
-		s.Current++
+		s.moveCursor()
 	}
 
-	result := s.GetSlice()
+	s.AddToken(token.STRING, s.GetSlice())
 	s.Current++
 
-	return result, nil
+	return nil
 }
 
 func (s *Scanner) GetSlice() string {
@@ -242,8 +237,7 @@ func (s *Scanner) Peak(char string) bool {
 	if !s.isNotAtTheEnd() || string(s.GetCurrent()) != char {
 		return false
 	}
-
-	s.Current++
+	s.moveCursor()
 	return true
 }
 
