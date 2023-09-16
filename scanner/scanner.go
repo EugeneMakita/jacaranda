@@ -23,7 +23,7 @@ func CreateScanner(source string) *Scanner {
 }
 
 func (s *Scanner) CreateTokens() ([]*token.Token, error) {
-	for s.AtTheEnd() {
+	for s.isNotAtTheEnd() {
 		char := s.moveCursor()
 		switch char {
 		case '(':
@@ -70,7 +70,7 @@ func (s *Scanner) CreateTokens() ([]*token.Token, error) {
 		case '"':
 			result, err := s.String()
 			if err != nil {
-				fmt.Println(err.Error())
+				panic(err.Error())
 			}
 			s.AddToken(token.STRING, result)
 		default:
@@ -103,19 +103,13 @@ func (s *Scanner) CreateTokens() ([]*token.Token, error) {
 }
 
 func (s *Scanner) IsDigit(char rune) bool {
-	if char >= '0' && char <= '9' {
-		return true
-	}
-
-	return false
+	return char >= '0' && char <= '9'
 }
 
 func (s *Scanner) IsAlpha(char rune) bool {
-	if char >= 'a' && char <= 'z' || char >= 'A' && char <= 'Z' || char == '_' {
-		return true
-	}
-
-	return false
+	return char >= 'a' && char <= 'z' ||
+		char >= 'A' && char <= 'Z' ||
+		char == '_'
 }
 
 func (s *Scanner) FindDoubleSymbols(symbols string, trueType, falseType token.Token_type) {
@@ -133,18 +127,18 @@ func (s *Scanner) FindDoubleSymbols(symbols string, trueType, falseType token.To
 func (s *Scanner) AddToken(tokenType token.Token_type, char string) {
 	s.Tokens = append(s.Tokens, &token.Token{
 		Type: tokenType,
-		Char: strings.ToUpper(string(char)),
+		Char: string(char),
 	})
 }
 
 func (s *Scanner) Identifier() error {
 	s.Start = s.Current - 1
 	for {
-		if s.Current >= len(s.Source) {
+		if !s.isNotAtTheEnd() {
 			break
 		}
 
-		if !s.IsDigit(rune(s.Source[s.Current])) && !s.IsAlpha(rune(s.Source[s.Current])) {
+		if !s.IsDigit(s.GetCurrent()) && !s.IsAlpha(s.GetCurrent()) {
 			break
 		}
 
@@ -158,74 +152,24 @@ func (s *Scanner) Identifier() error {
 
 func (s *Scanner) CheckIfWordIsReserved(reserved string) error {
 	switch reserved {
-	case "if":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "IF":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "var":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "VAR":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "let":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "LET":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "BE":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "be":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "FOR":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "for":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "RANGE":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "range":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "Continue":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "CONTINUE":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "Else":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "ELSE":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "CASE":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "case":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "SWITCH":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "switch":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "STRING":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "string":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "INTEGER":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "integer":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "FLOAT":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "float":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "WHILE":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "while":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "Break":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "BREAK":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "FUNC":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "func":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "exit":
-		s.AddToken(token.IDENTIFIER, reserved)
-	case "EXIT":
-		s.AddToken(token.IDENTIFIER, reserved)
+	case "if", "IF", "var", "VAR",
+		"If", "Var", "Let", "Be",
+		"let", "LET", "BE", "be",
+		"FOR", "for", "RANGE", "range",
+		"For", "Range", "continue", "Else",
+		"Continue", "CONTINUE", "else", "ELSE",
+		"CASE", "case", "SWITCH", "switch",
+		"Case", "Switch", "String", "Integer",
+		"STRING", "string", "INTEGER", "integer",
+		"FLOAT", "float", "WHILE", "while",
+		"Float", "While", "break", "Func",
+		"Break", "BREAK", "FUNC", "func",
+		"exit", "EXIT", "CLASS", "class",
+		"Exit", "Class", "Super", "True",
+		"SUPER", "super", "TRUE", "true",
+		"false", "FALSE", "return", "RETURN",
+		"False", "Return":
+		s.AddToken(token.IDENTIFIER, strings.ToUpper(reserved))
 	default:
 		return fmt.Errorf("this word [%s] is not recogised ", reserved)
 	}
@@ -236,68 +180,73 @@ func (s *Scanner) Number() error {
 	s.Start = s.Current - 1
 	isFloat := false
 	for {
-		if s.Current >= len(s.Source) {
+		if !s.isNotAtTheEnd() {
 			break
 		}
 
-		if !s.IsDigit(rune(s.Source[s.Current])) && s.Source[s.Current] != '.' {
+		if !s.IsDigit(s.GetCurrent()) && s.GetCurrent() != '.' {
 			break
 		}
 
-		if s.Source[s.Current] == '.' {
+		if s.GetCurrent() == '.' {
 			isFloat = true
 		}
 
 		s.Current++
 	}
 
-	result := s.Source[s.Start:s.Current]
-
 	if isFloat {
-		s.AddToken(token.FLOAT, result)
+		s.AddToken(token.FLOAT, s.GetSlice())
 		return nil
 	}
 
-	s.AddToken(token.INTEGER, result)
+	s.AddToken(token.INTEGER, s.GetSlice())
 	return nil
 }
 
 func (s *Scanner) String() (string, error) {
 	s.Start = s.Current
 	for {
-		if s.Current >= len(s.Source) {
+		if !s.isNotAtTheEnd() {
 			return "", fmt.Errorf("string not closed")
 		}
 
-		if s.Source[s.Current] == '"' {
-			s.End = s.Current
+		if s.GetCurrent() == '"' {
 			break
 		}
 
 		s.Current++
 	}
 
-	result := s.Source[s.Start:s.Current]
+	result := s.GetSlice()
 	s.Current++
 
 	return result, nil
 }
 
-func (s *Scanner) moveCursor() rune {
-	charInLine := s.Source[s.Current]
-	s.Current++
-	return rune(charInLine)
+func (s *Scanner) GetSlice() string {
+	return s.Source[s.Start:s.Current]
 }
 
-func (s *Scanner) AtTheEnd() bool {
+func (s *Scanner) moveCursor() rune {
+	charInLine := s.GetCurrent()
+	s.Current++
+	return charInLine
+}
+
+func (s *Scanner) isNotAtTheEnd() bool {
 	return s.Current < len(s.Source)
 }
 
 func (s *Scanner) Peak(char string) bool {
-	if s.Current >= len(s.Source) || string(s.Source[s.Current]) != char {
+	if !s.isNotAtTheEnd() || string(s.GetCurrent()) != char {
 		return false
 	}
 
 	s.Current++
 	return true
+}
+
+func (s *Scanner) GetCurrent() rune {
+	return rune(s.Source[s.Current])
 }
