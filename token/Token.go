@@ -28,11 +28,14 @@ const (
 
 	NEWLINE
 	TAB
+	//
 
 	//Data types
 	STRING
 	FLOAT
 	INTEGER
+	TRUE
+	FALSE
 
 	//RESERVED KEY WORDS
 	IDENTIFIER

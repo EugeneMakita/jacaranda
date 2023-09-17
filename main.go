@@ -1,6 +1,7 @@
 package main
 
 import (
+	"Lox/parser"
 	"Lox/scanner"
 	"bufio"
 	"fmt"
@@ -17,7 +18,6 @@ func main() {
 		if err != nil {
 			fmt.Println(err.Error())
 		}
-		fmt.Println("The whole sentence should be one", lines)
 	}
 }
 
@@ -35,6 +35,10 @@ func RunLine(lines string) error {
 	for key, val := range tokens {
 		fmt.Println(key, val)
 	}
+
+	parser := parser.CreateParser(tokens)
+	p := parser.Equality()
+	fmt.Println(p.String())
 
 	return nil
 }

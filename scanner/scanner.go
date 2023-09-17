@@ -160,11 +160,14 @@ func (s *Scanner) CheckIfWordIsReserved(reserved string) error {
 		"Float", "While", "break", "Func",
 		"Break", "BREAK", "FUNC", "func",
 		"exit", "EXIT", "CLASS", "class",
-		"Exit", "Class", "Super", "True",
-		"SUPER", "super", "TRUE", "true",
-		"false", "FALSE", "return", "RETURN",
-		"False", "Return":
+		"Exit", "Class", "Super",
+		"SUPER", "super", "return", "RETURN",
+		"Return":
 		s.AddToken(token.IDENTIFIER, strings.ToUpper(reserved))
+	case "True", "TRUE", "true":
+		s.AddToken(token.TRUE, "True")
+	case "False", "fALSE", "false":
+		s.AddToken(token.FALSE, "False")
 	default:
 		return fmt.Errorf("this word [%s] is not recogised ", reserved)
 	}
