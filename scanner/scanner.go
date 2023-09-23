@@ -123,8 +123,11 @@ func (s *Scanner) FindDoubleSymbols(symbols string, trueType, falseType token.To
 
 func (s *Scanner) AddToken(tokenType token.Token_type, char string) {
 	s.Tokens = append(s.Tokens, &token.Token{
-		Type: tokenType,
-		Char: char,
+		Type:  tokenType,
+		Char:  char,
+		Line:  s.Line,
+		Start: s.Current - len(char),
+		End:   s.Current,
 	})
 }
 

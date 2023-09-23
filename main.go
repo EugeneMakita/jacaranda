@@ -1,6 +1,7 @@
 package main
 
 import (
+	"Lox/interpretor"
 	"Lox/parser"
 	"Lox/scanner"
 	"bufio"
@@ -32,13 +33,11 @@ func RunLine(lines string) error {
 		panic(err.Error())
 	}
 
-	for key, val := range tokens {
-		fmt.Println(key, val)
-	}
-
 	parser := parser.CreateParser(tokens)
 	p := parser.Equality()
 	fmt.Println(p.String())
+	interpretor := interpretor.CreateInterpretor()
+	interpretor.Evaluate(p)
 
 	return nil
 }

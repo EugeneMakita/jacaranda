@@ -63,6 +63,9 @@ const (
 )
 
 type Token struct {
-	Type Token_type
-	Char string
+	Type  Token_type
+	Char  string
+	Line  int
+	Start int
+	End   int
 }
